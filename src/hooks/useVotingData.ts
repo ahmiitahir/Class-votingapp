@@ -36,7 +36,7 @@ export function useVotingData() {
       setError(null);
 
       const [studentsResponse, titlesResponse] = await Promise.all([
-        supabase.from("students").select("id, roll_number, name").order("roll_number"),
+        supabase.from("students").select("id, roll_number, student_name").order("roll_number"),
         supabase
           .from("titles")
           .select("id, title_name, display_order, title_type")

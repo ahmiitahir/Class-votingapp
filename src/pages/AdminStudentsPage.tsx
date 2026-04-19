@@ -73,7 +73,7 @@ function AdminStudentsPage() {
     setLoading(true);
     const response = await supabase
       .from("students")
-      .select("id, roll_number, name")
+      .select("id, roll_number, student_name")
       .order("roll_number");
 
     console.log("students response", response.data, response.error);

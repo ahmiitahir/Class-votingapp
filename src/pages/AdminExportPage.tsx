@@ -92,10 +92,10 @@ function AdminExportPage() {
     setFeedback(null);
 
     const [studentsResponse, credentialsResponse] = await Promise.all([
-      supabase.from("students").select("id, roll_number, name").order("roll_number"),
+      supabase.from("students").select("id, roll_number, student_name").order("roll_number"),
       supabase
         .from("voter_credentials")
-        .select("id, roll_number, student_name, email, voter_password, is_used, used_at")
+        .select("id, roll_number, student_name, voter_password, is_used, used_at")
         .order("roll_number"),
     ]);
 
@@ -141,7 +141,7 @@ function AdminExportPage() {
       const insertResponse = await supabase
         .from("voter_credentials")
         .insert(missingCredentialRows)
-        .select("id, roll_number, student_name, email, voter_password, is_used, used_at");
+        .select("id, roll_number, student_name, voter_password, is_used, used_at");
 
       if (insertResponse.error) {
         console.error("[AdminExportPage] credential creation failed", insertResponse.error);

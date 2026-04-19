@@ -72,7 +72,7 @@ function AdminUtilitiesPage() {
 
     if (pendingAction === "regenerate-passwords") {
       const [studentsResponse, credentialsResponse] = await Promise.all([
-        supabase.from("students").select("id, roll_number, name").order("roll_number"),
+        supabase.from("students").select("id, roll_number, student_name").order("roll_number"),
         supabase
           .from("voter_credentials")
           .select("id, roll_number, student_name, voter_password, is_used, used_at")
