@@ -58,17 +58,13 @@ function AllTitlesPage() {
     );
   }, [students, search]);
 
-  // Flat list of all titles for table view
   const flatTitles = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (!q) return titles;
     return titles.filter((t) => {
-      const giver = studentLookup.get(t.giver_id);
       const receiver = studentLookup.get(t.receiver_id);
       return (
         t.title_text.toLowerCase().includes(q) ||
-        giver?.student_name.toLowerCase().includes(q) ||
-        giver?.roll_number.toLowerCase().includes(q) ||
         receiver?.student_name.toLowerCase().includes(q) ||
         receiver?.roll_number.toLowerCase().includes(q)
       );
@@ -118,22 +114,20 @@ function AllTitlesPage() {
               <button
                 type="button"
                 onClick={() => setViewMode("table")}
-                className={`rounded-xl px-3 py-2 text-xs font-medium transition ${
-                  viewMode === "table"
+                className={`rounded-xl px-3 py-2 text-xs font-medium transition ${viewMode === "table"
                     ? "bg-slate-900 text-white"
                     : "text-slate-500 hover:text-slate-700"
-                }`}
+                  }`}
               >
                 <TableProperties className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode("cards")}
-                className={`rounded-xl px-3 py-2 text-xs font-medium transition ${
-                  viewMode === "cards"
+                className={`rounded-xl px-3 py-2 text-xs font-medium transition ${viewMode === "cards"
                     ? "bg-slate-900 text-white"
                     : "text-slate-500 hover:text-slate-700"
-                }`}
+                  }`}
               >
                 <Sparkles className="h-4 w-4" />
               </button>
@@ -172,7 +166,6 @@ function AllTitlesPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {flatTitles.map((title) => {
-                      const giver = studentLookup.get(title.giver_id);
                       const receiver = studentLookup.get(title.receiver_id);
                       return (
                         <tr
@@ -201,12 +194,10 @@ function AllTitlesPage() {
                               &ldquo;{title.title_text}&rdquo;
                             </span>
                           </td>
+                          {/* ── Giver hidden ── */}
                           <td className="px-6 py-4">
-                            <p className="text-slate-700">
-                              {giver?.student_name ?? "Unknown"}
-                            </p>
-                            <p className="text-xs text-slate-400">
-                              {giver?.roll_number ?? ""}
+                            <p className="text-sm italic text-slate-400">
+                              nahi bataonga 🙂
                             </p>
                           </td>
                           <td className="px-6 py-4 text-right text-xs text-slate-400 sm:px-8">
@@ -268,22 +259,20 @@ function AllTitlesPage() {
                       </div>
                     ) : (
                       <div className="divide-y divide-slate-50">
-                        {received.map((title) => {
-                          const giver = studentLookup.get(title.giver_id);
-                          return (
-                            <div
-                              key={title.id}
-                              className="flex items-center justify-between gap-4 px-6 py-3 sm:px-8"
-                            >
-                              <p className="text-sm font-medium text-slate-700">
-                                &ldquo;{title.title_text}&rdquo;
-                              </p>
-                              <p className="shrink-0 text-xs text-slate-400">
-                                — {giver?.student_name ?? "Unknown"}
-                              </p>
-                            </div>
-                          );
-                        })}
+                        {received.map((title) => (
+                          <div
+                            key={title.id}
+                            className="flex items-center justify-between gap-4 px-6 py-3 sm:px-8"
+                          >
+                            <p className="text-sm font-medium text-slate-700">
+                              &ldquo;{title.title_text}&rdquo;
+                            </p>
+                            {/* ── Giver hidden ── */}
+                            <p className="shrink-0 text-xs italic text-slate-400">
+                              — nahi bataonga 🙂
+                            </p>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>

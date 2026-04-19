@@ -128,7 +128,6 @@ function ProfileBrowserPage() {
     });
   }
 
-  // Close on outside click
   useEffect(() => {
     if (!showJumpMenu) return;
     function handleClick(e: MouseEvent) {
@@ -144,7 +143,6 @@ function ProfileBrowserPage() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showJumpMenu]);
 
-  // Recalculate on scroll/resize
   useEffect(() => {
     if (!showJumpMenu) return;
     window.addEventListener("scroll", calcPos, true);
@@ -276,7 +274,7 @@ function ProfileBrowserPage() {
         </div>
       </div>
 
-      {/* Portal dropdown — renders at body level, fully responsive */}
+      {/* Portal dropdown */}
       {showJumpMenu &&
         createPortal(
           <div
@@ -297,14 +295,14 @@ function ProfileBrowserPage() {
                   type="button"
                   onClick={() => jumpTo(idx)}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition ${idx === currentIndex
-                      ? "bg-accent-50 text-accent-500"
-                      : "hover:bg-slate-50"
+                    ? "bg-accent-50 text-accent-500"
+                    : "hover:bg-slate-50"
                     }`}
                 >
                   <span
                     className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${hasTitled
-                        ? "bg-emerald-100 text-emerald-600"
-                        : "bg-slate-100 text-slate-400"
+                      ? "bg-emerald-100 text-emerald-600"
+                      : "bg-slate-100 text-slate-400"
                       }`}
                   >
                     {hasTitled ? <Check className="h-3.5 w-3.5" /> : idx + 1}
@@ -419,20 +417,20 @@ function ProfileBrowserPage() {
           ) : (
             <div className="divide-y divide-slate-100 max-h-[calc(100vh-220px)] overflow-y-auto">
               {receivedTitles.map((title) => {
-                const giver = studentLookup.get(title.giver_id);
                 const isMyTitle = title.giver_id === currentUser.id;
                 return (
                   <div
                     key={title.id}
                     className={`flex items-start gap-3 px-6 py-3.5 sm:px-8 transition ${isMyTitle ? "bg-accent-50/30" : ""}`}
                   >
-                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${isMyTitle ? "bg-gradient-to-br from-accent-500 to-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>
-                      {giver?.student_name?.charAt(0)?.toUpperCase() ?? "?"}
+                    {/* ── Anonymous avatar ── */}
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                      <User className="h-4 w-4" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-slate-900">&ldquo;{title.title_text}&rdquo;</p>
                       <p className="mt-0.5 text-xs text-slate-400">
-                        — {giver?.student_name ?? "Unknown"} ({giver?.roll_number ?? ""})
+                        — Anonymous
                         {isMyTitle && (
                           <span className="ml-2 rounded-full bg-accent-100 px-2 py-0.5 text-[10px] font-semibold text-accent-500">You</span>
                         )}
