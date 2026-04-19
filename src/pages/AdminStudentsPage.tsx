@@ -162,7 +162,7 @@ function AdminStudentsPage() {
   async function applyStudentUpsert(previous: Student | null, next: StudentFormState) {
     const studentPayload = {
       roll_number: next.roll_number,
-      name: next.student_name,
+      student_name: next.student_name,
     };
 
     const response = previous
