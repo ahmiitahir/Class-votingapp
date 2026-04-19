@@ -1,13 +1,11 @@
-import { Download, LayoutDashboard, LogOut, Settings2, Tags, Users } from "lucide-react";
+import { LayoutDashboard, LogOut, TableProperties, Users } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import Button from "./Button";
 
 const adminLinks = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/admin/titles", label: "Titles", icon: Tags },
   { to: "/admin/students", label: "Students", icon: Users },
-  { to: "/admin/export", label: "Export CSV", icon: Download },
-  { to: "/admin/utilities", label: "Utilities", icon: Settings2 },
+  { to: "/admin/titles", label: "All Titles", icon: TableProperties },
 ];
 
 function AdminShell() {
@@ -25,10 +23,10 @@ function AdminShell() {
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.28em] text-slate-400">Admin workspace</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-              Reusable class voting platform
+              Class titles manager
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-              Manage titles, students, credentials, exports, and voting resets from one place without editing SQL for normal event setup.
+              Manage students and view all peer-given titles from one place.
             </p>
           </div>
 

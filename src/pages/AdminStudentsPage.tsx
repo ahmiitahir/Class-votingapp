@@ -48,27 +48,6 @@ function AdminStudentsPage() {
   const [importingCsv, setImportingCsv] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function mapStudentRow(row: Record<string, unknown>): Student | null {
-    const id = typeof row.id === "string" ? row.id : "";
-    const rollNumber = typeof row.roll_number === "string" ? row.roll_number : "";
-    const studentName =
-      typeof row.name === "string"
-        ? row.name
-        : typeof row.student_name === "string"
-          ? row.student_name
-          : "";
-
-    if (!id || !rollNumber || !studentName) {
-      return null;
-    }
-
-    return {
-      id,
-      roll_number: rollNumber,
-      student_name: studentName,
-    };
-  }
-
   async function loadStudents() {
     setLoading(true);
     const response = await supabase
@@ -76,25 +55,10 @@ function AdminStudentsPage() {
       .select("id, roll_number, student_name")
       .order("roll_number");
 
-    console.log("students response", response.data, response.error);
-
-    console.log("[AdminStudentsPage] students fetch response", {
-      data: response.data,
-      error: response.error,
-      status: response.status,
-      statusText: response.statusText,
-    });
-
     if (response.error) {
-      console.error("[AdminStudentsPage] students fetch failed", response.error);
       setError("Students could not be loaded right now.");
     } else {
-      const mappedStudents = (response.data ?? [])
-        .map((row) => mapStudentRow(row as Record<string, unknown>))
-        .filter((student): student is Student => student !== null);
-
-      console.log("[AdminStudentsPage] normalized students rows", mappedStudents);
-      setStudents(mappedStudents);
+      setStudents((response.data ?? []) as Student[]);
       setError(null);
     }
 
@@ -127,38 +91,6 @@ function AdminStudentsPage() {
     setFeedback(null);
   }
 
-  async function syncStudentReferences(previous: Student, next: StudentFormState) {
-    if (previous.student_name !== next.student_name) {
-      await Promise.all([
-        supabase
-          .from("submission_votes")
-          .update({ selected_student_name: next.student_name })
-          .eq("selected_student_name", previous.student_name),
-        supabase
-          .from("submission_votes")
-          .update({ selected_student_name_2: next.student_name })
-          .eq("selected_student_name_2", previous.student_name),
-      ]);
-    }
-
-    await Promise.all([
-      supabase
-        .from("voter_credentials")
-        .update({
-          roll_number: next.roll_number,
-          student_name: next.student_name,
-        })
-        .eq("roll_number", previous.roll_number),
-      supabase
-        .from("submissions")
-        .update({
-          roll_number: next.roll_number,
-          student_name: next.student_name,
-        })
-        .eq("roll_number", previous.roll_number),
-    ]);
-  }
-
   async function applyStudentUpsert(previous: Student | null, next: StudentFormState) {
     const studentPayload = {
       roll_number: next.roll_number,
@@ -171,10 +103,6 @@ function AdminStudentsPage() {
 
     if (response.error) {
       throw new Error(response.error.message);
-    }
-
-    if (previous) {
-      await syncStudentReferences(previous, next);
     }
   }
 
@@ -231,16 +159,12 @@ function AdminStudentsPage() {
       encoding: "utf-8",
       delimitersToGuess: [",", ";", "\t", "|"],
       complete: (result: ParseResult<Record<string, string>>) => {
-        console.log("[AdminStudentsPage] raw parsed CSV rows", result.data);
-        console.log("[AdminStudentsPage] Papa Parse errors", result.errors);
-
         const fatalErrors = result.errors.filter((parserError: ParseError) => {
           const code = parserError.code ?? "";
           return code === "UndetectableDelimiter" || code === "MissingQuotes" || code === "InvalidQuotes";
         });
 
         if (fatalErrors.length > 0 && (result.data?.length ?? 0) === 0) {
-          console.error("[AdminStudentsPage] fatal CSV parse errors", fatalErrors);
           setError(
             `The CSV could not be read properly: ${fatalErrors[0]?.message ?? "unknown parser error"}.`,
           );
@@ -252,19 +176,11 @@ function AdminStudentsPage() {
         const parsed = parseStudentsCsvRecords(result.data ?? []);
 
         if ("error" in parsed) {
-          console.error("[AdminStudentsPage] CSV header detection failed", {
-            rawRows: result.data,
-            parseErrors: result.errors,
-          });
           setError(parsed.error);
           setCsvPreviewRows([]);
           setCsvParseSummary(null);
           return;
         }
-
-        console.log("[AdminStudentsPage] detected headers", parsed.detectedHeaders);
-        console.log("[AdminStudentsPage] normalized headers", parsed.normalizedHeaders);
-        console.log("[AdminStudentsPage] invalid row reasons", parsed.invalidRowReasons);
 
         setCsvPreviewRows(parsed.parsedRows);
         setCsvParseSummary({
@@ -291,7 +207,6 @@ function AdminStudentsPage() {
         }
       },
       error: (parserError) => {
-        console.error("[AdminStudentsPage] CSV file read failed", parserError);
         setError(
           `The CSV file could not be read${parserError?.message ? `: ${parserError.message}` : "."}`,
         );
@@ -360,15 +275,12 @@ function AdminStudentsPage() {
 
     setSaving(true);
 
-    const [studentDelete, credentialDelete] = await Promise.all([
-      supabase.from("students").delete().eq("id", deleteTarget.id),
-      supabase.from("voter_credentials").delete().eq("roll_number", deleteTarget.roll_number),
-    ]);
+    const response = await supabase.from("students").delete().eq("id", deleteTarget.id);
 
-    if (studentDelete.error || credentialDelete.error) {
-      setError(studentDelete.error?.message ?? credentialDelete.error?.message ?? "Delete failed.");
+    if (response.error) {
+      setError(response.error.message);
     } else {
-      setFeedback(`Deleted ${deleteTarget.student_name}. Existing historical votes were preserved.`);
+      setFeedback(`Deleted ${deleteTarget.student_name}.`);
       setDeleteTarget(null);
       await loadStudents();
     }
@@ -385,7 +297,7 @@ function AdminStudentsPage() {
             {editingStudent ? "Edit student" : "Add student"}
           </h3>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Student records power the voter list, candidate dropdowns, export generation, and credential matching.
+            Students added here can sign up and give titles to each other.
           </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -535,7 +447,7 @@ function AdminStudentsPage() {
               <div className="p-6">
                 <EmptyState
                   title="No students yet"
-                  description="Add students here so they appear in voting and export flows."
+                  description="Add students here so they can sign up and give titles."
                 />
               </div>
             ) : (
@@ -580,7 +492,7 @@ function AdminStudentsPage() {
         title="Delete student?"
         description={
           deleteTarget
-            ? `This removes ${deleteTarget.student_name} from the class list and deletes the matching voter credential record. Historical votes already cast will stay in results.`
+            ? `This removes ${deleteTarget.student_name} from the class list. Any titles they gave or received will also be deleted.`
             : ""
         }
         confirmLabel="Delete student"
