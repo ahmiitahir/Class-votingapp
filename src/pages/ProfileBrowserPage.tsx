@@ -29,7 +29,7 @@ function ProfileBrowserPage() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [showJumpMenu, setShowJumpMenu] = useState(false);
-  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 0, maxHeight: 300 });
   const jumpButtonRef = useRef<HTMLButtonElement>(null);
 
   const loadData = useCallback(async () => {
@@ -112,6 +112,22 @@ function ProfileBrowserPage() {
     setFeedback(null);
   }, [myTitleForCurrent, currentIndex]);
 
+  function calcPos() {
+    if (!jumpButtonRef.current) return;
+    const rect = jumpButtonRef.current.getBoundingClientRect();
+    const isMobile = window.innerWidth < 640;
+    const MENU_WIDTH = isMobile ? window.innerWidth - 24 : 288;
+    const leftPos = isMobile ? 12 : Math.max(8, rect.right - MENU_WIDTH);
+    const topPos = rect.bottom + 8;
+    const availableHeight = window.innerHeight - topPos - 16;
+    setMenuPos({
+      top: topPos,
+      left: leftPos,
+      width: MENU_WIDTH,
+      maxHeight: Math.max(120, availableHeight),
+    });
+  }
+
   // Close on outside click
   useEffect(() => {
     if (!showJumpMenu) return;
@@ -128,50 +144,27 @@ function ProfileBrowserPage() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showJumpMenu]);
 
-  // Recalculate position on open or scroll/resize
+  // Recalculate on scroll/resize
   useEffect(() => {
     if (!showJumpMenu) return;
-    function updatePos() {
-      if (!jumpButtonRef.current) return;
-      const rect = jumpButtonRef.current.getBoundingClientRect();
-      setMenuPos({
-        top: rect.bottom + 8,
-        right: window.innerWidth - rect.right,
-      });
-    }
-    updatePos();
-    window.addEventListener("scroll", updatePos, true);
-    window.addEventListener("resize", updatePos);
+    window.addEventListener("scroll", calcPos, true);
+    window.addEventListener("resize", calcPos);
     return () => {
-      window.removeEventListener("scroll", updatePos, true);
-      window.removeEventListener("resize", updatePos);
+      window.removeEventListener("scroll", calcPos, true);
+      window.removeEventListener("resize", calcPos);
     };
   }, [showJumpMenu]);
 
   function toggleJumpMenu() {
-    if (!showJumpMenu && jumpButtonRef.current) {
-      const rect = jumpButtonRef.current.getBoundingClientRect();
-      setMenuPos({
-        top: rect.bottom + 8,
-        right: window.innerWidth - rect.right,
-      });
-    }
+    calcPos();
     setShowJumpMenu((v) => !v);
   }
 
   async function handleSaveTitle() {
     if (!currentStudent) return;
-
     const trimmed = titleInput.trim();
-    if (!trimmed) {
-      setFeedback("Write a title first!");
-      return;
-    }
-
-    if (trimmed.length > 60) {
-      setFeedback("Title must be 60 characters or less.");
-      return;
-    }
+    if (!trimmed) { setFeedback("Write a title first!"); return; }
+    if (trimmed.length > 60) { setFeedback("Title must be 60 characters or less."); return; }
 
     setSaving(true);
     setFeedback(null);
@@ -181,27 +174,17 @@ function ProfileBrowserPage() {
         .from("student_titles")
         .update({ title_text: trimmed })
         .eq("id", myTitleForCurrent.id);
-
-      if (res.error) {
-        setFeedback("Failed to update. Try again.");
-        setSaving(false);
-        return;
-      }
+      if (res.error) { setFeedback("Failed to update. Try again."); setSaving(false); return; }
     } else {
       const res = await supabase.from("student_titles").insert({
         giver_id: currentUser.id,
         receiver_id: currentStudent.id,
         title_text: trimmed,
       });
-
       if (res.error) {
-        if (res.error.code === "23505") {
-          setFeedback(
-            "You already gave this person a title. Refresh to see it.",
-          );
-        } else {
-          setFeedback("Failed to save. Try again.");
-        }
+        setFeedback(res.error.code === "23505"
+          ? "You already gave this person a title. Refresh to see it."
+          : "Failed to save. Try again.");
         setSaving(false);
         return;
       }
@@ -210,11 +193,7 @@ function ProfileBrowserPage() {
     const updated = await supabase
       .from("student_titles")
       .select("id, giver_id, receiver_id, title_text, created_at");
-
-    if (updated.data) {
-      setTitles(updated.data as StudentTitle[]);
-    }
-
+    if (updated.data) setTitles(updated.data as StudentTitle[]);
     setFeedback(myTitleForCurrent ? "✓ Title updated!" : "✓ Title saved!");
     setSaving(false);
   }
@@ -273,7 +252,6 @@ function ProfileBrowserPage() {
             </div>
           </div>
 
-          {/* Trigger button — no relative wrapper needed for portal approach */}
           <div data-jump-menu>
             <button
               ref={jumpButtonRef}
@@ -298,13 +276,18 @@ function ProfileBrowserPage() {
         </div>
       </div>
 
-      {/* ✅ Portal: renders dropdown at document.body level, escaping ALL overflow:hidden ancestors */}
+      {/* Portal dropdown — renders at body level, fully responsive */}
       {showJumpMenu &&
         createPortal(
           <div
             data-jump-portal
-            className="fixed z-[9999] max-h-64 w-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-lg"
-            style={{ top: menuPos.top, right: menuPos.right }}
+            className="fixed z-[9999] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-lg"
+            style={{
+              top: menuPos.top,
+              left: menuPos.left,
+              width: menuPos.width,
+              maxHeight: menuPos.maxHeight,
+            }}
           >
             {students.map((s, idx) => {
               const hasTitled = titledStudentIds.has(s.id);
@@ -324,11 +307,7 @@ function ProfileBrowserPage() {
                         : "bg-slate-100 text-slate-400"
                       }`}
                   >
-                    {hasTitled ? (
-                      <Check className="h-3.5 w-3.5" />
-                    ) : (
-                      idx + 1
-                    )}
+                    {hasTitled ? <Check className="h-3.5 w-3.5" /> : idx + 1}
                   </span>
                   <span className="min-w-0 truncate font-medium text-slate-700">
                     {s.student_name}
@@ -365,8 +344,7 @@ function ProfileBrowserPage() {
                 {myTitleForCurrent ? (
                   <>
                     <Pencil className="h-4 w-4 text-accent-500" />
-                    Your title for{" "}
-                    {currentStudent!.student_name.split(" ")[0]}
+                    Your title for {currentStudent!.student_name.split(" ")[0]}
                   </>
                 ) : (
                   <>
@@ -380,48 +358,25 @@ function ProfileBrowserPage() {
                 <input
                   type="text"
                   value={titleInput}
-                  onChange={(e) => {
-                    setTitleInput(e.target.value);
-                    setFeedback(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void handleSaveTitle();
-                  }}
+                  onChange={(e) => { setTitleInput(e.target.value); setFeedback(null); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") void handleSaveTitle(); }}
                   placeholder="e.g. Most Creative Mind, Class Entertainer..."
                   maxLength={60}
                   className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-accent-500/30 focus:ring-2 focus:ring-accent-500/10"
                 />
-                <Button
-                  onClick={() => void handleSaveTitle()}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    "..."
-                  ) : myTitleForCurrent ? (
-                    <>
-                      <Check className="mr-1 h-4 w-4" />
-                      Update
-                    </>
+                <Button onClick={() => void handleSaveTitle()} disabled={saving}>
+                  {saving ? "..." : myTitleForCurrent ? (
+                    <><Check className="mr-1 h-4 w-4" />Update</>
                   ) : (
-                    <>
-                      <Send className="mr-1 h-4 w-4" />
-                      Save
-                    </>
+                    <><Send className="mr-1 h-4 w-4" />Save</>
                   )}
                 </Button>
               </div>
 
               <div className="mt-2 flex items-center justify-between">
-                <p className="text-xs text-slate-400">
-                  {titleInput.length}/60 characters
-                </p>
+                <p className="text-xs text-slate-400">{titleInput.length}/60 characters</p>
                 {feedback && (
-                  <p
-                    className={`text-xs font-semibold ${feedback.includes("✓")
-                        ? "text-emerald-600"
-                        : "text-rose-600"
-                      }`}
-                  >
+                  <p className={`text-xs font-semibold ${feedback.includes("✓") ? "text-emerald-600" : "text-rose-600"}`}>
                     {feedback}
                   </p>
                 )}
@@ -431,26 +386,16 @@ function ProfileBrowserPage() {
 
           {/* Navigation */}
           <div className="flex items-center justify-between gap-3">
-            <Button
-              variant="secondary"
-              onClick={goPrev}
-              disabled={currentIndex === 0}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Previous
+            <Button variant="secondary" onClick={goPrev} disabled={currentIndex === 0}>
+              <ArrowLeft className="mr-2 h-4 w-4" />Previous
             </Button>
-            <Button
-              variant="secondary"
-              onClick={goNext}
-              disabled={currentIndex === students.length - 1}
-            >
-              Next
-              <ArrowRight className="ml-2 h-4 w-4" />
+            <Button variant="secondary" onClick={goNext} disabled={currentIndex === students.length - 1}>
+              Next<ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        {/* Right: Titles given by others */}
+        {/* Right: Titles received */}
         <div className="section-shell overflow-hidden p-0 lg:sticky lg:top-6">
           <div className="border-b border-slate-200 px-6 py-4 sm:px-8">
             <div className="flex items-center gap-3">
@@ -458,12 +403,9 @@ function ProfileBrowserPage() {
                 <Sparkles className="h-4 w-4" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-slate-950">
-                  Titles received
-                </h3>
+                <h3 className="text-lg font-semibold text-slate-950">Titles received</h3>
                 <p className="text-sm text-slate-500">
-                  {receivedTitles.length} title
-                  {receivedTitles.length !== 1 ? "s" : ""} given to{" "}
+                  {receivedTitles.length} title{receivedTitles.length !== 1 ? "s" : ""} given to{" "}
                   {currentStudent!.student_name.split(" ")[0]}
                 </p>
               </div>
@@ -472,10 +414,7 @@ function ProfileBrowserPage() {
 
           {receivedTitles.length === 0 ? (
             <div className="p-6 sm:p-8">
-              <EmptyState
-                title="No titles yet"
-                description="Be the first to give this classmate a title!"
-              />
+              <EmptyState title="No titles yet" description="Be the first to give this classmate a title!" />
             </div>
           ) : (
             <div className="divide-y divide-slate-100 max-h-[calc(100vh-220px)] overflow-y-auto">
@@ -485,28 +424,17 @@ function ProfileBrowserPage() {
                 return (
                   <div
                     key={title.id}
-                    className={`flex items-start gap-3 px-6 py-3.5 sm:px-8 transition ${isMyTitle ? "bg-accent-50/30" : ""
-                      }`}
+                    className={`flex items-start gap-3 px-6 py-3.5 sm:px-8 transition ${isMyTitle ? "bg-accent-50/30" : ""}`}
                   >
-                    <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${isMyTitle
-                          ? "bg-gradient-to-br from-accent-500 to-blue-600 text-white"
-                          : "bg-slate-100 text-slate-600"
-                        }`}
-                    >
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${isMyTitle ? "bg-gradient-to-br from-accent-500 to-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>
                       {giver?.student_name?.charAt(0)?.toUpperCase() ?? "?"}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-slate-900">
-                        &ldquo;{title.title_text}&rdquo;
-                      </p>
+                      <p className="text-sm font-semibold text-slate-900">&ldquo;{title.title_text}&rdquo;</p>
                       <p className="mt-0.5 text-xs text-slate-400">
-                        — {giver?.student_name ?? "Unknown"}{" "}
-                        ({giver?.roll_number ?? ""})
+                        — {giver?.student_name ?? "Unknown"} ({giver?.roll_number ?? ""})
                         {isMyTitle && (
-                          <span className="ml-2 rounded-full bg-accent-100 px-2 py-0.5 text-[10px] font-semibold text-accent-500">
-                            You
-                          </span>
+                          <span className="ml-2 rounded-full bg-accent-100 px-2 py-0.5 text-[10px] font-semibold text-accent-500">You</span>
                         )}
                       </p>
                     </div>
