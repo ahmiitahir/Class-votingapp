@@ -1,23 +1,3 @@
-<h1 align="center">🎓 Farewell Voting App 🎓</h1>
-
-<p align="center">
-  <b>farewell nahi ho rahi toh kia?</b><br>
-  You can always have a title day in your class.<br>
-  Here is your step by step guide for it.
-</p>
-
-<p align="center">
-  A clean, minimal, and reusable farewell voting platform for classes.
-</p>
-
-<p align="center">
-  <img alt="React" src="https://img.shields.io/badge/Frontend-React%20%2B%20Vite-blue">
-  <img alt="Supabase" src="https://img.shields.io/badge/Backend-Supabase-green">
-  <img alt="Deploy" src="https://img.shields.io/badge/Deploy-Vercel-black">
-</p>
-
----
-
 ## 🚀 Setting this up for your own class
 
 Don’t worry — this is made for software engineering students, so everything is simple, structured, and copy-paste friendly.
@@ -350,5 +330,3 @@ farewell-voting-app/
 If you're using this for your class — good luck.
 
 And yes, people *will* take voting very seriously 😭
-
-```
